@@ -1,0 +1,525 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Vault</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Geist', sans-serif; background: #fafafa; color: #0a0a0a; }
+  :root {
+    --border: #e4e4e7;
+    --muted: #71717a;
+    --muted-bg: #f4f4f5;
+    --accent: #18181b;
+    --row-hover: #f9f9f9;
+    --badge-edgar: #dbeafe;
+    --badge-edgar-text: #1d4ed8;
+    --badge-upload: #f0fdf4;
+    --badge-upload-text: #15803d;
+    --badge-type: #faf5ff;
+    --badge-type-text: #7e22ce;
+    --badge-financial: #fff7ed;
+    --badge-financial-text: #c2410c;
+    --shadow-drawer: -8px 0 32px rgba(0,0,0,0.08);
+  }
+  .mono { font-family: 'Geist Mono', monospace; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; line-height: 1.6;
+  }
+  .badge-edgar { background: var(--badge-edgar); color: var(--badge-edgar-text); }
+  .badge-upload { background: var(--badge-upload); color: var(--badge-upload-text); }
+  .badge-policy { background: var(--badge-type); color: var(--badge-type-text); }
+  .badge-financial { background: var(--badge-financial); color: var(--badge-financial-text); }
+  .badge-peer { background: #f0f9ff; color: #0369a1; }
+  .badge-precedent { background: #fdf4ff; color: #a21caf; }
+  .badge-internal { background: #fefce8; color: #a16207; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; transition: all 0.15s;
+  }
+  .btn-primary { background: #18181b; color: #fff; }
+  .btn-primary:hover { background: #27272a; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--muted-bg); color: #18181b; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-size: 11px; font-weight: 500; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    user-select: none; white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s; cursor: pointer;
+  }
+  tbody tr:hover { background: var(--row-hover); }
+  tbody tr.selected { background: #f5f3ff; }
+  tbody td { padding: 13px 16px; font-size: 13px; vertical-align: middle; }
+
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100%; width: 400px;
+    background: #fff; border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-drawer);
+    transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    z-index: 50; overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .drawer.open { transform: translateX(0); }
+
+  .version-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .version-row:last-child { border-bottom: none; }
+  .version-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--border);
+    margin-top: 5px; flex-shrink: 0;
+  }
+  .version-dot.latest { background: #18181b; }
+
+  .upload-zone {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 32px; text-align: center; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: #18181b; background: #f9f9f9; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+    display: none; align-items: center; justify-content: center; z-index: 60;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 10px; width: 480px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+
+  input[type="text"], select, textarea {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: 'Geist', sans-serif; outline: none;
+    transition: border-color 0.15s; background: #fff;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus { border-color: #18181b; }
+  label { font-size: 12px; font-weight: 500; color: #3f3f46; display: block; margin-bottom: 6px; }
+
+  .search-input {
+    padding: 7px 12px 7px 34px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: 'Geist', sans-serif; outline: none; width: 240px;
+    background: #fff;
+  }
+  .search-input:focus { border-color: #18181b; }
+
+  .chip {
+    padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--muted);
+    transition: all 0.12s;
+  }
+  .chip.active { background: #18181b; color: #fff; border-color: #18181b; }
+
+  .usage-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--muted); background: var(--muted-bg);
+    border-radius: 4px; padding: 2px 7px;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div style="max-width:1100px; margin:0 auto; padding:32px 24px;">
+
+  <!-- Header -->
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+    <div>
+      <h1 style="font-size:20px; font-weight:600; letter-spacing:-0.3px;">Vault</h1>
+      <p style="font-size:13px; color:var(--muted); margin-top:2px;">Source documents, precedents, and company context used across features</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Upload document
+    </button>
+  </div>
+
+  <!-- Toolbar -->
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+    <!-- Search -->
+    <div style="position:relative;">
+      <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--muted);" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" placeholder="Search documents…" id="searchInput" oninput="filterDocs()" />
+    </div>
+    <!-- Filter chips -->
+    <div style="display:flex; gap:6px;" id="filterChips">
+      <button class="chip active" data-filter="all" onclick="setFilter('all', this)">All</button>
+      <button class="chip" data-filter="peer" onclick="setFilter('peer', this)">Peer filings</button>
+      <button class="chip" data-filter="internal" onclick="setFilter('internal', this)">Internal</button>
+      <button class="chip" data-filter="precedent" onclick="setFilter('precedent', this)">Precedents</button>
+    </div>
+    <div style="margin-left:auto; font-size:12px; color:var(--muted);" id="docCount">7 documents</div>
+  </div>
+
+  <!-- Table -->
+  <div style="background:#fff; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+    <table id="docTable">
+      <thead>
+        <tr>
+          <th style="width:36px; padding-left:16px;"><input type="checkbox" style="cursor:pointer;" /></th>
+          <th>Document</th>
+          <th>Type</th>
+          <th>Source</th>
+          <th>Version</th>
+          <th>Uploaded by</th>
+          <th>Date</th>
+          <th style="width:80px;">Used in</th>
+          <th style="width:36px;"></th>
+        </tr>
+      </thead>
+      <tbody id="docBody"></tbody>
+    </table>
+
+    <!-- Empty state -->
+    <div id="emptyState" style="display:none; padding:48px; text-align:center;">
+      <div style="font-size:32px; margin-bottom:12px;">🗂</div>
+      <p style="font-size:14px; font-weight:500; margin-bottom:4px;">No documents found</p>
+      <p style="font-size:13px; color:var(--muted);">Try a different search or filter</p>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Drawer -->
+<div class="drawer" id="drawer">
+  <div style="padding:20px 20px 0; border-bottom:1px solid var(--border); position:sticky; top:0; background:#fff; z-index:1;">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding-bottom:16px;">
+      <div>
+        <p style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;" id="drawerType"></p>
+        <h2 style="font-size:15px; font-weight:600; line-height:1.3;" id="drawerName"></h2>
+      </div>
+      <button class="btn btn-ghost" style="padding:6px 10px; flex-shrink:0;" onclick="closeDrawer()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div style="display:flex; gap:8px; padding-bottom:16px;" id="drawerBadges"></div>
+  </div>
+
+  <div style="padding:20px; flex:1;">
+    <!-- Metadata -->
+    <p style="font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:12px;">Metadata</p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;" id="drawerMeta"></div>
+
+    <!-- Usage -->
+    <p style="font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:12px;">Used in</p>
+    <div style="margin-bottom:24px;" id="drawerUsage"></div>
+
+    <!-- Version history -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <p style="font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);">Version history</p>
+      <button class="btn btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="openModal()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        New version
+      </button>
+    </div>
+    <div id="drawerVersions"></div>
+  </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="font-size:15px; font-weight:600;">Upload to Vault</h3>
+      <button class="btn btn-ghost" style="padding:5px 8px;" onclick="closeModal()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+      <!-- Drop zone -->
+      <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+        ondragover="event.preventDefault(); this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="handleDrop(event)">
+        <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(event)" />
+        <svg style="margin:0 auto 10px; color:var(--muted);" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M20 16.7A5 5 0 0 1 15 21H7a5 5 0 0 1-4.6-6.1L4 8h16l1.6 6.6"/></svg>
+        <p id="dropLabel" style="font-size:13px; font-weight:500; margin-bottom:4px;">Drop file here or <span style="color:#18181b; text-decoration:underline;">browse</span></p>
+        <p style="font-size:12px; color:var(--muted);">PDF, Word, Excel — max 50MB</p>
+      </div>
+      <!-- Fields -->
+      <div>
+        <label>Document type</label>
+        <select>
+          <option>Peer filing (EDGAR)</option>
+          <option>Internal document</option>
+          <option>Precedent</option>
+          <option>Financial statement</option>
+          <option>Policy / governance</option>
+          <option>Legal opinion</option>
+        </select>
+      </div>
+      <div>
+        <label>Company / entity</label>
+        <input type="text" placeholder="e.g. Apple Inc., Netflix, Your Company" />
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label>Filing period</label>
+          <input type="text" placeholder="e.g. Q3 2024, FY2023" />
+        </div>
+        <div>
+          <label>Form type</label>
+          <input type="text" placeholder="e.g. 10-K, 10-Q, 8-K" />
+        </div>
+      </div>
+      <div>
+        <label>Notes <span style="color:var(--muted); font-weight:400;">(optional)</span></label>
+        <textarea rows="2" placeholder="e.g. Used as style precedent for MD&A section. Reviewed by outside counsel Apr 2025." style="resize:none;"></textarea>
+      </div>
+    </div>
+    <div style="padding:16px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary">Upload to Vault</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const docs = [
+  {
+    id:1, name:"Apple Inc. — 10-K Annual Report", type:"Peer filing", typeKey:"peer",
+    source:"EDGAR", version:"v1", uploadedBy:"Quinn Liu", date:"Apr 28, 2025",
+    company:"Apple Inc.", period:"FY2024", form:"10-K",
+    notes:"Benchmark reference for MD&A structure and risk factors language.",
+    usedIn:["Benchmark","Review"],
+    versions:[
+      { v:"v1", date:"Apr 28, 2025", by:"Quinn Liu", note:"Initial import from EDGAR" }
+    ]
+  },
+  {
+    id:2, name:"Netflix Inc. — 10-Q Q1 2025", type:"Peer filing", typeKey:"peer",
+    source:"EDGAR", version:"v2", uploadedBy:"Quinn Liu", date:"Apr 14, 2025",
+    company:"Netflix Inc.", period:"Q1 2025", form:"10-Q",
+    notes:"Temporal comparison for streaming sector risk factor evolution.",
+    usedIn:["Benchmark","Draft"],
+    versions:[
+      { v:"v2", date:"Apr 14, 2025", by:"Quinn Liu", note:"Re-fetched after SEC amendment" },
+      { v:"v1", date:"Mar 3, 2025", by:"Quinn Liu", note:"Initial import" }
+    ]
+  },
+  {
+    id:3, name:"Acme Corp — Dividend Policy 2026", type:"Internal", typeKey:"internal",
+    source:"Uploaded", version:"v3", uploadedBy:"Sara Kim", date:"May 1, 2025",
+    company:"Acme Corp", period:"2026", form:"Policy",
+    notes:"Board-approved version. Supersedes Feb 2025 draft. Do not use prior versions for disclosure.",
+    usedIn:["Draft"],
+    versions:[
+      { v:"v3", date:"May 1, 2025", by:"Sara Kim", note:"Post-board-approval final" },
+      { v:"v2", date:"Mar 18, 2025", by:"Sara Kim", note:"Auditor comments incorporated" },
+      { v:"v1", date:"Feb 2, 2025", by:"Quinn Liu", note:"Initial draft" }
+    ]
+  },
+  {
+    id:4, name:"Snowflake Inc. — 10-K FY2024", type:"Peer filing", typeKey:"peer",
+    source:"EDGAR", version:"v1", uploadedBy:"Ibrahim Shittu", date:"Apr 2, 2025",
+    company:"Snowflake Inc.", period:"FY2024", form:"10-K",
+    notes:"SaaS peer for supply chain risk factor benchmarking.",
+    usedIn:["Benchmark"],
+    versions:[
+      { v:"v1", date:"Apr 2, 2025", by:"Ibrahim Shittu", note:"Initial import" }
+    ]
+  },
+  {
+    id:5, name:"White & Case LLP — SEC Comment Response Template", type:"Precedent", typeKey:"precedent",
+    source:"Uploaded", version:"v2", uploadedBy:"Quinn Liu", date:"Mar 22, 2025",
+    company:"White & Case LLP", period:"2024", form:"Correspondence",
+    notes:"Approved template for responding to SEC comment letters. Privileged — do not share externally.",
+    usedIn:["Review","Draft"],
+    versions:[
+      { v:"v2", date:"Mar 22, 2025", by:"Quinn Liu", note:"Updated with 2024 comment letter guidance" },
+      { v:"v1", date:"Nov 14, 2024", by:"Quinn Liu", note:"Original template" }
+    ]
+  },
+  {
+    id:6, name:"Acme Corp — Audited Financial Statements FY2024", type:"Internal", typeKey:"internal",
+    source:"Uploaded", version:"v1", uploadedBy:"Sara Kim", date:"May 3, 2025",
+    company:"Acme Corp", period:"FY2024", form:"Financial statements",
+    notes:"PwC-audited. Source of truth for all numerical tick-and-tie.",
+    usedIn:["Review","Draft"],
+    versions:[
+      { v:"v1", date:"May 3, 2025", by:"Sara Kim", note:"Final audited version from PwC" }
+    ]
+  },
+  {
+    id:7, name:"eBay Inc. — 10-Q Q3 2024", type:"Peer filing", typeKey:"peer",
+    source:"EDGAR", version:"v1", uploadedBy:"Ibrahim Shittu", date:"Feb 18, 2025",
+    company:"eBay Inc.", period:"Q3 2024", form:"10-Q",
+    notes:"E-commerce benchmark. Added per pilot feedback session.",
+    usedIn:["Benchmark"],
+    versions:[
+      { v:"v1", date:"Feb 18, 2025", by:"Ibrahim Shittu", note:"Initial import" }
+    ]
+  }
+];
+
+let activeFilter = "all";
+let searchQuery = "";
+let selectedId = null;
+
+function sourceBadge(src) {
+  return src === "EDGAR"
+    ? `<span class="badge badge-edgar">EDGAR</span>`
+    : `<span class="badge badge-upload">Uploaded</span>`;
+}
+
+function typeBadge(type, key) {
+  const map = { peer:"badge-peer", internal:"badge-internal", precedent:"badge-precedent" };
+  return `<span class="badge ${map[key] || 'badge-policy'}">${type}</span>`;
+}
+
+function usagePill(f) {
+  const colors = { Benchmark:"#0369a1", Review:"#15803d", Draft:"#7e22ce" };
+  return `<span class="usage-pill" style="color:${colors[f]||'var(--muted)'}">${f}</span>`;
+}
+
+function renderTable() {
+  const q = searchQuery.toLowerCase();
+  let filtered = docs.filter(d => {
+    const matchFilter = activeFilter === "all" || d.typeKey === activeFilter;
+    const matchSearch = !q || d.name.toLowerCase().includes(q) || d.company.toLowerCase().includes(q);
+    return matchFilter && matchSearch;
+  });
+
+  const tbody = document.getElementById("docBody");
+  const empty = document.getElementById("emptyState");
+  document.getElementById("docCount").textContent = `${filtered.length} document${filtered.length !== 1 ? "s" : ""}`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  tbody.innerHTML = filtered.map(d => `
+    <tr onclick="openDrawer(${d.id})" class="${selectedId === d.id ? 'selected' : ''}">
+      <td style="padding-left:16px;"><input type="checkbox" onclick="event.stopPropagation()" style="cursor:pointer;" /></td>
+      <td>
+        <div style="font-weight:500; font-size:13px; margin-bottom:2px;">${d.name}</div>
+        <div style="font-size:11px; color:var(--muted); font-family:'Geist Mono',monospace;">${d.company} · ${d.period}</div>
+      </td>
+      <td>${typeBadge(d.type, d.typeKey)}</td>
+      <td>${sourceBadge(d.source)}</td>
+      <td><span class="mono" style="font-size:12px; color:var(--muted);">${d.version}</span></td>
+      <td style="font-size:13px;">${d.uploadedBy}</td>
+      <td style="font-size:12px; color:var(--muted); white-space:nowrap;">${d.date}</td>
+      <td>
+        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+          ${d.usedIn.map(usagePill).join("")}
+        </div>
+      </td>
+      <td>
+        <button class="btn btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function openDrawer(id) {
+  const d = docs.find(x => x.id === id);
+  selectedId = id;
+  renderTable();
+
+  document.getElementById("drawerType").textContent = d.type;
+  document.getElementById("drawerName").textContent = d.name;
+  document.getElementById("drawerBadges").innerHTML = sourceBadge(d.source) + " " + typeBadge(d.type, d.typeKey);
+
+  document.getElementById("drawerMeta").innerHTML = [
+    ["Company", d.company],
+    ["Period", d.period],
+    ["Form type", d.form],
+    ["Latest version", `<span class="mono">${d.version}</span>`],
+    ["Uploaded by", d.uploadedBy],
+    ["Last updated", d.date],
+  ].map(([k,v]) => `
+    <div>
+      <div style="font-size:11px; color:var(--muted); margin-bottom:3px;">${k}</div>
+      <div style="font-size:13px; font-weight:500;">${v}</div>
+    </div>
+  `).join("");
+
+  const notesHtml = d.notes ? `
+    <div style="background:var(--muted-bg); border-radius:6px; padding:10px 12px; font-size:12px; color:#3f3f46; margin-bottom:16px; line-height:1.5;">
+      ${d.notes}
+    </div>` : "";
+
+  document.getElementById("drawerUsage").innerHTML = notesHtml + `
+    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+      ${d.usedIn.map(usagePill).join("")}
+    </div>`;
+
+  document.getElementById("drawerVersions").innerHTML = d.versions.map((v, i) => `
+    <div class="version-row">
+      <div class="version-dot ${i === 0 ? 'latest' : ''}"></div>
+      <div style="flex:1;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;">
+          <span class="mono" style="font-size:12px; font-weight:500;">${v.v}</span>
+          ${i === 0 ? '<span class="badge" style="background:#f0fdf4; color:#15803d; font-size:10px;">Latest</span>' : ''}
+        </div>
+        <div style="font-size:12px; color:#3f3f46; margin-bottom:2px;">${v.note}</div>
+        <div style="font-size:11px; color:var(--muted);">${v.by} · ${v.date}</div>
+      </div>
+      ${i > 0 ? `<button class="btn btn-ghost" style="padding:3px 8px; font-size:11px;">Restore</button>` : ''}
+    </div>
+  `).join("");
+
+  document.getElementById("drawer").classList.add("open");
+}
+
+function closeDrawer() {
+  selectedId = null;
+  renderTable();
+  document.getElementById("drawer").classList.remove("open");
+}
+
+function openModal() { document.getElementById("modalOverlay").classList.add("open"); }
+function closeModal() { document.getElementById("modalOverlay").classList.remove("open"); }
+function handleOverlayClick(e) { if (e.target === e.currentTarget) closeModal(); }
+
+function setFilter(filter, el) {
+  activeFilter = filter;
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  renderTable();
+}
+
+function filterDocs() {
+  searchQuery = document.getElementById("searchInput").value;
+  renderTable();
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) document.getElementById("dropLabel").textContent = file.name;
+  e.target.closest('.upload-zone').classList.remove('drag');
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) document.getElementById("dropLabel").textContent = file.name;
+}
+
+renderTable();
+</script>
+</body>
+</html>
